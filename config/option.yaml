@@ -1,0 +1,49 @@
+AgentCommand: "agent"
+# 日志同时写入文件（追加）；留空则只输出到控制台
+#LogFile: "D:\\CursorAgent\\output\\logs\\cursor-agent.log"
+# DefaultOutDir: "D:\\CursorAgent\\output\\"
+# DefaultUploadURL: ""
+
+# LaunchCursor 任务使用（唤起 Cursor IDE + 插件做检查时必填）：
+CursorExePath: "D:\\cursor\\resources\\app\\bin\\cursor.cmd"
+CursorWorkspace: ""
+PluginListenerPort: 9150
+
+Tasks:
+  - Name: "code-review"
+    Skill: "code-review-skill"
+    #LaunchCursor: true   # true 时唤起 Cursor 插件流程，插件会与PluginListenerPort交互
+    #CronTime: "0 30 18 * * *"
+    Input:
+      Type: "svn_diff"
+      IncludeSvnSource: true   # 为 true 时用 ProjectPath 作为工作副本根目录解析 @源文件
+      CheckDay: -10
+      ProjectPath: "D:\\testollama"
+      RepoURL: "http://zt-c600540.ztgame.com/svn/testollama/"
+      UserName: "test"
+      Password: "test"
+      DiffDir: "D:\\CursorAgent\\output\\diff"
+    Output:
+      OutDir: "D:\\CursorAgent\\output\\code_review_result"
+      OutPrefix: "ai_result"
+      #UploadURL: "http://127.0.0.1:9100/upload"
+
+  # - Name: "summarize-doc"
+  #   Skill: "summarize-document"
+  #   Input:
+  #     Type: "file"
+  #     Paths:
+  #       - "D:\\reports\\weekly.md"
+  #   Output:
+  #     OutDir: "D:\\CursorAgent\\output\\"
+  #     OutPrefix: "summary"
+
+  # - Name: "weekly-brief"
+  #   Skill: "weekly-brief"
+  #   CronTime: "0 0 9 * * 1"
+  #   Input:
+  #     Type: "prompt"
+  #     Prompt: "生成本周工作摘要，日期范围：{{.WeekStart}} 至 {{.WeekEnd}}"
+  #   Output:
+  #     OutDir: "D:\\CursorAgent\\output\\"
+  #     OutPrefix: "brief"
