@@ -19,7 +19,7 @@ Tasks:
       IncludeSvnSource: true   # 为 true 时用 ProjectPath 作为工作副本根目录解析 @源文件
       CheckDay: -10
       ProjectPath: "D:\\testollama"
-      RepoURL: "http://zt-c600540.ztgame.com/svn/testollama/"
+      RepoURL: "http://127.0.0.1/svn/testollama/"
       UserName: "test"
       Password: "test"
       DiffDir: "D:\\CursorAgent\\output\\diff"
