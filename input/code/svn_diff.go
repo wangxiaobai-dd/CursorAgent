@@ -23,6 +23,7 @@ type SvnDiffSource struct {
 	workDir   string
 	diffFiles []string
 	metaMap   map[string]string // revision -> commit msg
+	authorMap map[string]string // revision -> svn log author
 	mu        sync.Mutex
 }
 
@@ -36,7 +37,7 @@ func NewSvnDiffSource(opt *config.TaskInput) *SvnDiffSource {
 	if err := os.MkdirAll(diffDir, 0755); err != nil {
 		log.Printf("svn_diff: mkdir %s failed: %v", diffDir, err)
 	}
-	return &SvnDiffSource{opt: opt, workDir: diffDir, metaMap: make(map[string]string)}
+	return &SvnDiffSource{opt: opt, workDir: diffDir, metaMap: make(map[string]string), authorMap: make(map[string]string)}
 }
 
 func (p *SvnDiffSource) WorkDir() string { return p.workDir }
@@ -53,59 +54,32 @@ func firstLineCommitMsg(s string) string {
 }
 
 func (p *SvnDiffSource) revisionHeaderForItem(item types.InputItem) string {
-	if rev, ok := item.Meta["revision"]; ok {
-		msg := firstLineCommitMsg(item.Meta["msg"])
-		return "REVISION:" + rev + "\t\t" + msg
+	var rev, msg, author string
+	if r, ok := item.Meta["revision"]; ok {
+		rev = r
+		msg = firstLineCommitMsg(item.Meta["msg"])
+		author = strings.TrimSpace(item.Meta["author"])
+	} else {
+		base := filepath.Base(item.Path)
+		base = strings.TrimSuffix(base, filepath.Ext(base))
+		parsedRev, parsedMsg := util.ParseRevisionFromDiffFilename(base)
+		rev = parsedRev
+		msg = firstLineCommitMsg(parsedMsg)
+		author = strings.TrimSpace(p.authorMap[rev])
+		if msg == "" {
+			msg = firstLineCommitMsg(p.metaMap[rev])
+		}
 	}
-	base := filepath.Base(item.Path)
-	base = strings.TrimSuffix(base, filepath.Ext(base))
-	rev, msg := util.ParseRevisionFromDiffFilename(base)
-	msg = firstLineCommitMsg(msg)
-	return "REVISION:" + rev + "\t\t" + msg
+	if author == "" {
+		author = strings.TrimSpace(p.authorMap[rev])
+	}
+	// 头部为单行：REVISION + 提交说明 + AUTHOR。
+	return "REVISION:" + rev + "\t\t" + msg + "   AUTHOR:" + author
 }
 
-func pluginDiffPromptBlock(skillName, diffPath, resultFile, header, sourceRefs string) string {
-	var b strings.Builder
-	b.WriteString("请使用 skill 文件 ")
-	b.WriteString(skillName)
-	b.WriteString(" 检查 @")
-	b.WriteString(diffPath)
-	b.WriteString("，只输出结果，不要其他操作。")
-	b.WriteString(sourceRefs)
-	b.WriteString("\n\n结果追加写入文件：")
-	b.WriteString(resultFile)
-	b.WriteString("，写入头部为：")
-	b.WriteString(header)
-	return b.String()
-}
-
-func (p *SvnDiffSource) BuildMergedDiffReviewPrompt(skillName, resultFileAbs string, items []types.InputItem) string {
-	n := len(items)
-	var b strings.Builder
-	if n > 1 {
-		b.WriteString("以下共 ")
-		b.WriteString(strconv.Itoa(n))
-		b.WriteString(" 段审查，请按顺序完成；审查结果按 skill 要求分 Revision 块，必须全部追加写入到结果文件（唯一目标路径，禁止其它文件名如工作区目录名+.txt）：\n")
-		b.WriteString(resultFileAbs)
-		b.WriteString("\n\n")
-	}
-	for i, item := range items {
-		if i > 0 {
-			b.WriteString("\n\n")
-		}
-		absDiff, _ := filepath.Abs(item.Path)
-		header := p.revisionHeaderForItem(item)
-		var sourceRefs string
-		if p.opt.IncludeSvnSource && strings.TrimSpace(p.opt.ProjectPath) != "" {
-			if refs, err := util.BuildSourceRefsFromDiff(absDiff, p.opt.ProjectPath); err != nil {
-				log.Printf("svn_diff: BuildSourceRefsFromDiff %s: %v", absDiff, err)
-			} else {
-				sourceRefs = refs
-			}
-		}
-		b.WriteString(pluginDiffPromptBlock(skillName, absDiff, resultFileAbs, header, sourceRefs))
-	}
-	return strings.TrimSpace(b.String())
+// RevisionHeaderForItem 供 runner 侧写入结果文件头部使用。
+func (p *SvnDiffSource) RevisionHeaderForItem(item types.InputItem) string {
+	return p.revisionHeaderForItem(item)
 }
 
 type argsMode int
@@ -140,6 +114,7 @@ func (p *SvnDiffSource) execSvn(mode argsMode, args ...string) (string, error) {
 type svnLog struct {
 	Entries []struct {
 		Revision string `xml:"revision,attr"`
+		Author   string `xml:"author"`
 		Msg      string `xml:"msg"`
 	} `xml:"logentry"`
 }
@@ -164,6 +139,7 @@ func (p *SvnDiffSource) getRevisions() ([]string, error) {
 	for _, e := range logData.Entries {
 		revs = append(revs, e.Revision)
 		p.metaMap[e.Revision] = e.Msg
+		p.authorMap[e.Revision] = strings.TrimSpace(e.Author)
 	}
 	return revs, nil
 }
@@ -262,7 +238,11 @@ func (p *SvnDiffSource) GetInputs() ([]types.InputItem, error) {
 		if idx := strings.Index(name, "_"); idx > 0 {
 			rev = name[:idx]
 		}
-		meta := map[string]string{"revision": rev, "msg": firstLineCommitMsg(p.metaMap[rev])}
+		meta := map[string]string{
+			"revision": rev,
+			"msg":      firstLineCommitMsg(p.metaMap[rev]),
+			"author":   p.authorMap[rev],
+		}
 		items = append(items, types.InputItem{Path: f, Meta: meta})
 	}
 	return items, nil
