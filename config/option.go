@@ -10,7 +10,9 @@ import (
 )
 
 type Option struct {
-	AgentCommand       string `yaml:"AgentCommand"`
+	AgentCommand string `yaml:"AgentCommand"`
+	// AgentModel 传给 Cursor agent 的 --model（如 gpt-5、sonnet-4）；auto 或空表示不传 --model，使用 CLI 默认模型。
+	AgentModel   string `yaml:"AgentModel"`
 	DefaultOutDir      string `yaml:"DefaultOutDir"`
 	DefaultUploadURL   string `yaml:"DefaultUploadURL"`
 	LogFile            string `yaml:"LogFile"`
@@ -76,6 +78,9 @@ func LoadOption(filePath string) (*Option, error) {
 	}
 	if opt.PluginListenerPort == 0 {
 		opt.PluginListenerPort = 9150
+	}
+	if strings.TrimSpace(opt.AgentModel) == "" {
+		opt.AgentModel = "auto"
 	}
 	for i := range opt.Tasks {
 		t := &opt.Tasks[i]

@@ -42,32 +42,21 @@ func NewSvnDiffSource(opt *config.TaskInput) *SvnDiffSource {
 
 func (p *SvnDiffSource) WorkDir() string { return p.workDir }
 
-func firstLineCommitMsg(s string) string {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return ""
-	}
-	if i := strings.IndexAny(s, "\r\n"); i >= 0 {
-		s = strings.TrimSpace(s[:i])
-	}
-	return s
-}
-
 func (p *SvnDiffSource) revisionHeaderForItem(item types.InputItem) string {
 	var rev, msg, author string
 	if r, ok := item.Meta["revision"]; ok {
 		rev = r
-		msg = firstLineCommitMsg(item.Meta["msg"])
+		msg = util.FirstLine(item.Meta["msg"])
 		author = strings.TrimSpace(item.Meta["author"])
 	} else {
 		base := filepath.Base(item.Path)
 		base = strings.TrimSuffix(base, filepath.Ext(base))
 		parsedRev, parsedMsg := util.ParseRevisionFromDiffFilename(base)
 		rev = parsedRev
-		msg = firstLineCommitMsg(parsedMsg)
+		msg = util.FirstLine(parsedMsg)
 		author = strings.TrimSpace(p.authorMap[rev])
 		if msg == "" {
-			msg = firstLineCommitMsg(p.metaMap[rev])
+			msg = util.FirstLine(p.metaMap[rev])
 		}
 	}
 	if author == "" {
@@ -150,43 +139,8 @@ func (p *SvnDiffSource) prevRev(rev string) string {
 }
 
 func (p *SvnDiffSource) diffPath(rev string) string {
-	msgPart := sanitizeFileNamePart(p.metaMap[rev])
+	msgPart := util.SanitizeFilenameSegment(p.metaMap[rev])
 	return filepath.Join(p.workDir, rev+"_"+msgPart+".diff")
-}
-
-func sanitizeFileNamePart(s string) string {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return "no_msg"
-	}
-	var b strings.Builder
-	lastUnderscore := false
-	for _, r := range s {
-		switch {
-		case r < 32 || strings.ContainsRune(`<>:"/\|?*`, r):
-			if !lastUnderscore {
-				b.WriteByte('-')
-				lastUnderscore = true
-			}
-		case r == ' ' || r == '\t' || r == '\n' || r == '\r':
-			if !lastUnderscore {
-				b.WriteByte('-')
-				lastUnderscore = true
-			}
-		default:
-			b.WriteRune(r)
-			lastUnderscore = false
-		}
-	}
-	out := strings.Trim(b.String(), " ._")
-	if out == "" {
-		out = "no_msg"
-	}
-	runes := []rune(out)
-	if len(runes) > 60 {
-		out = string(runes[:60])
-	}
-	return out
 }
 
 func (p *SvnDiffSource) GetInputs() ([]types.InputItem, error) {
@@ -240,7 +194,7 @@ func (p *SvnDiffSource) GetInputs() ([]types.InputItem, error) {
 		}
 		meta := map[string]string{
 			"revision": rev,
-			"msg":      firstLineCommitMsg(p.metaMap[rev]),
+			"msg":      util.FirstLine(p.metaMap[rev]),
 			"author":   p.authorMap[rev],
 		}
 		items = append(items, types.InputItem{Path: f, Meta: meta})

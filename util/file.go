@@ -27,8 +27,8 @@ func ClearOrEmptyFile(path string) error {
 	return nil
 }
 
-// ResultFileIsEmpty 结果文件不存在或去空白后为空时返回 true。
-func ResultFileIsEmpty(path string) bool {
+// IsFileEmptyOrMissing 文件不存在、读失败或去空白后为空时返回 true。
+func IsFileEmptyOrMissing(path string) bool {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return true

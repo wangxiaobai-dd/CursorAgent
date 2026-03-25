@@ -13,6 +13,8 @@ import (
 // Client 用于调用 Cursor CLI（例如 agent）执行技能。
 type Client struct {
 	AgentCommand string
+	// AgentModel：auto 表示不传 --model；否则追加 --model <值>。
+	AgentModel string
 }
 
 var ErrAgentCommandUnavailable = errors.New("agent command unavailable")
@@ -29,8 +31,11 @@ func resolveAgentCommand(agentCommand string) string {
 	return ""
 }
 
-func NewClient(agentCommand string) *Client {
-	return &Client{AgentCommand: resolveAgentCommand(agentCommand)}
+func NewClient(agentCommand, agentModel string) *Client {
+	if strings.TrimSpace(agentModel) == "" {
+		agentModel = "auto"
+	}
+	return &Client{AgentCommand: resolveAgentCommand(agentCommand), AgentModel: agentModel}
 }
 
 // RunSkill 运行一个技能：若 filePath 非空，会在提示中引用 @filePath。
@@ -64,8 +69,11 @@ func (c *Client) RunSkill(skillName, workDir, filePath, promptOnly string) (stri
 		"--trust",
 		"--workspace", absWorkDir,
 		"--output-format", "text",
-		"-p", prompt,
 	}
+	if m := strings.TrimSpace(c.AgentModel); m != "" && !strings.EqualFold(m, "auto") {
+		args = append(args, "--model", m)
+	}
+	args = append(args, "-p", prompt)
 	cmd := exec.Command(c.AgentCommand, args...)
 	cmd.Dir = absWorkDir
 	var stdout, stderr bytes.Buffer
@@ -79,15 +87,4 @@ func (c *Client) RunSkill(skillName, workDir, filePath, promptOnly string) (stri
 		return "", err
 	}
 	return stdout.String(), nil
-}
-
-// LaunchWithExtension 唤起 Cursor IDE 并加载指定插件。
-// 参数：cursorExe 为 cursor.cmd 完整路径，workspace 为打开的工作区目录。
-// extraEnv 会追加到子进程环境（如 CURSOR_AGENT_TASK_NAME=xxx），可为 nil。
-// 返回的 cmd 由调用方 Start() 后 Wait()。
-func LaunchWithExtension(cursorExe string) *exec.Cmd {
-	args := []string{}
-	cmd := exec.Command(cursorExe, args...)
-	log.Printf("cursor: %s %s", cursorExe, strings.Join(args, " "))
-	return cmd
 }

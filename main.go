@@ -33,7 +33,7 @@ func main() {
 	}
 	defer closeLog()
 
-	client := cursor.NewClient(opt.AgentCommand)
+	client := cursor.NewClient(opt.AgentCommand, opt.AgentModel)
 
 	var pluginListener *server.PluginListener
 	if opt.PluginListenerPort != 0 {

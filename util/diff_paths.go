@@ -48,8 +48,8 @@ func ParseRevisionFromDiffFilename(baseNoExt string) (revision, submitMsg string
 	return baseNoExt[:idx], baseNoExt[idx+1:]
 }
 
-// BuildSourceRefsFromDiff 读取 diff 并解析路径，在 svnWorkingDir 下存在则生成 @绝对路径 引用块。
-func BuildSourceRefsFromDiff(diffPath, svnWorkingDir string) (string, error) {
+// BuildSourceRefsFromDiff 读取 diff 并解析路径，在 workingDir 下存在则生成 @绝对路径 引用块。
+func BuildSourceRefsFromDiff(diffPath, workingDir string) (string, error) {
 	content, err := ReadFileStringAuto(diffPath)
 	if err != nil {
 		return "", err
@@ -57,7 +57,7 @@ func BuildSourceRefsFromDiff(diffPath, svnWorkingDir string) (string, error) {
 	relPaths := ParseDiffFilePaths(content)
 	var refs []string
 	for _, rel := range relPaths {
-		abs := filepath.Join(svnWorkingDir, filepath.FromSlash(rel))
+		abs := filepath.Join(workingDir, filepath.FromSlash(rel))
 		if _, err := os.Stat(abs); err == nil {
 			refs = append(refs, "@"+abs)
 		}

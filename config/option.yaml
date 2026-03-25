@@ -1,4 +1,6 @@
 AgentCommand: "agent"
+# Agent 模型：auto 为默认（不传 --model）；否则传给 agent，如 gpt-5、sonnet-4、sonnet-4-thinking（以 agent --list-models 为准）
+AgentModel: "auto"
 # 日志同时写入文件（追加）；留空则只输出到控制台
 #LogFile: "D:\\CursorAgent\\output\\logs\\cursor-agent.log"
 # DefaultOutDir: "D:\\CursorAgent\\output\\"
@@ -19,7 +21,7 @@ Tasks:
       IncludeSvnSource: true   # 为 true 时用 ProjectPath 作为工作副本根目录解析 @源文件
       CheckDay: -10
       ProjectPath: "D:\\testollama"
-      RepoURL: "http://127.0.0.1/svn/testollama/"
+      RepoURL: "http://zt-c600540.ztgame.com/svn/testollama/"
       UserName: "test"
       Password: "test"
       DiffDir: "D:\\CursorAgent\\output\\diff"
