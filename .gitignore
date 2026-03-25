@@ -35,6 +35,4 @@ go.work.sum
 output/
 vendor/
 
-# 本地配置（含账号等敏感信息），模板见 config/option.yaml.example
 config/option.yaml
-option.yaml
