@@ -1,3 +1,6 @@
+# 复制为 config/option.yaml 后按环境修改；option.yaml 已在 .gitignore 中，勿提交真实配置。
+# 启动示例：CursorAgent.exe -config config/option.yaml
+
 AgentCommand: "agent"
 # Agent 模型：auto 为默认（不传 --model）；否则传给 agent，如 gpt-5、sonnet-4、sonnet-4-thinking（以 agent --list-models 为准）
 AgentModel: "auto"
@@ -7,23 +10,23 @@ AgentModel: "auto"
 # DefaultUploadURL: ""
 
 # LaunchCursor 任务使用（唤起 Cursor IDE + 插件做检查时必填）：
-CursorExePath: "D:\\cursor\\resources\\app\\bin\\cursor.cmd"
+CursorExePath: "C:\\path\\to\\cursor\\resources\\app\\bin\\cursor.cmd"
 CursorWorkspace: ""
 PluginListenerPort: 9150
 
 Tasks:
   - Name: "code-review"
     Skill: "code-review-skill"
-    #LaunchCursor: true   # true 时唤起 Cursor 插件流程，插件会与PluginListenerPort交互
+    #LaunchCursor: true   # true 时唤起 Cursor 插件流程，插件会与 PluginListenerPort 交互
     #CronTime: "0 30 18 * * *"
     Input:
       Type: "svn_diff"
       IncludeSvnSource: true   # 为 true 时用 ProjectPath 作为工作副本根目录解析 @源文件
-      CheckDay: -10
-      ProjectPath: "D:\\testollama"
-      RepoURL: "http://127.0.0.1/svn/testollama/"
-      UserName: "test"
-      Password: "test"
+      CheckDay: -1  # -1:昨天 -2:昨天+前天 类推 1:今天
+      ProjectPath: "D:\\path\\to\\svn\\working-copy"
+      RepoURL: "http://127.0.0.1/svn/your-repo/"
+      UserName: "your-username"
+      Password: "your-password"
       DiffDir: "D:\\CursorAgent\\output\\diff"
     Output:
       OutDir: "D:\\CursorAgent\\output\\code_review_result"
